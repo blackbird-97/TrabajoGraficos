@@ -1,0 +1,163 @@
+---
+title: "TrabajoGraficos"
+author: "yo"
+date: "10/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libreria
+
+```{r}
+summary.data.frame(fullDatos)
+library(ggplot2)
+library(csv)
+library(gdata)
+library(dplyr)
+```
+
+## Including Plots
+
+```{r}
+plot(fullDatos)
+```
+
+```{r}
+ggplot(fullDatos,aes(x=precio))+
+  geom_histogram()+
+  scale_x_continuous(name = "Precio")+
+  scale_y_continuous(name = "Frecuencia")+
+  ggtitle(label = "Grafico Distribucion")
+```
+```{r}
+levels(fullDatos$categoria)
+  fullDatos$categoria<-factor(fullDatos$categoria)
+```
+#gráfico categorías totales
+```{r}
+ggplot(fullDatos,aes(x=precio, fill=categoria))+
+  scale_x_continuous(name = "Precio")+
+  scale_y_continuous(name = "Categoria")+
+  geom_histogram()
+```
+# Ejercicio 1: buscaremos las 10 categorías y comunas más publicadas en la RM
+```{r}
+DatosCategoria<-table(fullDatos$categoria)
+Categorias<-sort(DatosCategoria, decreasing = T)
+TopCategorias<-Categorias[1:10]
+DatosComuna<-table(fullDatos$comuna)
+Comuna<-sort(DatosComuna, decreasing = T)
+TopComuna<-Comuna[1:10]
+
+```
+# Ejercicio 2: se filtrará las categorías y comunas para obtener un Top 10 en una nueva base de datos para cada una
+```{r}
+dfCat<-as.data.frame(TopCategorias)
+dfCat<-rename(dfCat, c("Categoria"="Var1"))
+dfCom<-as.data.frame(TopComuna)
+dfCom<-rename(dfCom, c("Comuna"="Var1"))
+dfCat
+dfCom
+```
+##Analisis visual para top 10 categorías más publicadas
+```{r}
+ggplot(dfCat,aes(x=Freq, fill=Categoria))+
+  scale_x_continuous(name = "Frecuencia")+
+  scale_y_continuous(name = "Categoria")+
+  geom_bar()+
+coord_flip()
+```
+#De acuerdo a lo analizado anteriormente, se puede llegar a la conclusión que dentro de la variable categorías, existe una alta oferta de Accesorios y piezas para vehículos, superando aproximádamente por 15 publicaciones más a la categoría en el segundo lugar, la cuál es de moda y vestuario, además podemos notar una clara concentración en una fecuencia de 4 a 11 publicaciones para las categorías que les siguen.
+
+
+##Analisis visual para top 10 comunas en dónde más se publica
+```{r}
+ggplot(dfCom,aes(x=Freq, fill=Comuna))+
+  scale_x_continuous(name = "Frecuencia")+
+  scale_y_continuous(name = "Comuna")+
+  geom_bar()+
+coord_flip()
+```
+#Respecto al gráfico de comunas, podemos decir que la mayor concentración de publicaciones está en la comuna de El Bosque, a diferencia del análisis de la variable anterior, esta vez la brecha existente entre la primera Comuna en el Top10 y las que les sige no es tan grande, por lo que podemos decir que la distribución de esta variable no es tan dispersa como la anterior.
+
+
+##Ejercicio 3:
+
+#Esto sucede por las funciones creadas para cada variable, en donde se establecieron condiciones para ajustar los valores entregados por estas, de manera en que todos fueran del mismo tipo y estuvieran escritos de la misma manera, para que así se consideren como la misma clase en R. Pero si no se cumplía la condición establecida dentro del if, ya sea por ser un valor mal escrito, que no corresponda a lo establecido, o quizás fuera un valor vacío, arrojaría el valor NA.
+
+#Para los precios, un valor numérico, tenemos la siguiente función que define la manera de obtenerlo:
+
+sacandoPrecio <- function(htmlSeg){
+  nodoBread <- html_nodes(htmlSeg, ".offer")
+  if(length(nodoBread)>0){
+    precio <- html_text(nodoBread)
+    precio <- gsub("\\t","",precio)
+    precio <- gsub("\\n","",precio)
+    precio <- gsub("\\$","",precio)
+    precio <- gsub("[.]","",precio)
+    precio <- as.numeric(precio)
+  }else{
+    precio = NA
+  }
+  return(precio)
+
+#Esta función nos indica que precio debe ser mayot a 0, y además que al quitarle los datos innecesarios que contiene el precio. Si no queda como valor numérico o es vacío, no puede considerarse como tal, entonces arroja NA.
+
+#Para tipo de negocio, se tiene la siguiente función:
+
+obtenerTipoNegocio <- function(htmlSeg){
+  nodoBread <- html_nodes(htmlSeg, ".details")
+  nodoBread <- html_nodes(nodoBread, "table")
+  tabla <- html_table(nodoBread)[[1]]
+  subsettn <- unlist(subset(tabla, X1 == 'Tipo')[2])
+  if(length(subsettn)>0){
+    return(subsettn)
+  }else{
+    return(NA)
+  }
+}
+
+#Esta función nos indica que para obtener la variable tipo de negocio, está definido que en la tabla en donde se encuentra la información, debe existir el dato 'Tipo' para considerarse parte de esta variable, entonces si no hay ningun tipo de valor, o no cumple lo establecido, arroja NA.
+
+
+#Ejercicio 4: Buscar la manera de guardar y cargar los datos de un CSV
+##Para cargar a R un archivo en formato csv, debemos usar el comando read.csv, en donde:
+##read.csv("Ruta de acceso al archivo(con su nombre incluído)",sep = " ", encoding = "UTF8")
+##Primero se carga la ruta de acceso, el comando sep lo utilizamos para definir la separación que tendremos entre los datos, ya sean espacios, puntos, guiones, etc. Y respecto al encodig, nos sirve para mantener los formatos del data frame cargado, sin que corra el riesgo de sufrir modificaciones en la carga.
+##Para guardar a csv un data frame desde R, debemos usar el comando write.csv, en donde por ejemplo, con los datos que estamos trabajando, funcionaría de la siguiente manera, guardándose en el lugar de trabajo que definimos anteriormente:
+```{r}
+write.csv(fullDatos, "Data_Yapo.csv")
+```
+
+#Ejemplificando de la misma manera, pero para cargar nuestros datos que acabamos de guardar:
+```{r}
+#read.csv("C:/Users/Vanne/Documents/descargandoYapo/Data_Yapo.csv",sep = " ", encoding = "UTF8")
+```
+#Quitar comentario para probar.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
